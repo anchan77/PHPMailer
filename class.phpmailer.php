@@ -1231,19 +1231,9 @@ class PHPMailer {
       $this->SetError($this->Lang('file_open') . $path);
       return '';
     }
-    if (function_exists('get_magic_quotes')) {
-        function get_magic_quotes() {
-            return false;
-        }
-}
-    if (PHP_VERSION < 6) {
-      $magic_quotes = get_magic_quotes_runtime();
-      set_magic_quotes_runtime(0);
-    }
     $file_buffer  = file_get_contents($path);
     $file_buffer  = $this->EncodeString($file_buffer, $encoding);
     fclose($fd);
-    if (PHP_VERSION < 6) { set_magic_quotes_runtime($magic_quotes); }
     return $file_buffer;
   }
 
@@ -1289,7 +1279,7 @@ class PHPMailer {
     switch (strtolower($position)) {
       case 'phrase':
         if (!preg_match('/[\200-\377]/', $str)) {
-          /* Can't use addslashes as we don't know what value has magic_quotes_sybase. */
+          /* Use addcslashes to escape control characters, backslashes, and quotes. */
           $encoded = addcslashes($str, "\0..\37\177\\\"");
           if (($str == $encoded) && !preg_match('/[^A-Za-z0-9!#$%&\'*+\/=?^_`{|}~ -]/', $str)) {
             return ($encoded);
