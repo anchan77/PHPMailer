@@ -55,8 +55,7 @@
  *
  * Configuration Properties (must remain public for BC):
  * - $SMTP_PORT  : int    - Default SMTP port (25)
- * - $CRLF       : string - Line ending for SMTP protocol ("
-")
+ * - $CRLF       : string - Line ending for SMTP protocol ("\r\n")
  * - $do_debug   : int    - Debug level (0=off, 1=errors, 2=commands, 4=data)
  * - $do_verp    : bool   - Enable VERP (Variable Envelope Return Path)
  *
@@ -102,7 +101,7 @@ class SMTP {
 
   /**
    *  Sets whether debugging is turned on
-   *  @var bool
+   *  @var int Debug level: 0 = off, 1 = errors only, 2 = commands, 4 = data
    */
   public $do_debug;       // the level of debug to perform
 
@@ -161,7 +160,10 @@ class SMTP {
    * SMTP CODE SUCCESS: 220
    * SMTP CODE FAILURE: 421
    * @access public
-   * @return bool
+   * @param string $host The hostname or IP address of the SMTP server
+   * @param int $port The port number (default: 0 = use SMTP_PORT)
+   * @param int $tval Timeout value in seconds (default: 30)
+   * @return bool True on successful connection, false on failure
    */
   public function Connect($host,$port=0,$tval=30) {
     /* set the error val to null so there is no confusion */
@@ -210,7 +212,7 @@ class SMTP {
     $announce = $this->get_lines();
 
     /* set the timeout  of any socket functions at 1/10 of a second */
-    //if(function_exists("socket_set_timeout"))
+    //if(function_exists("stream_set_timeout"))
     //   stream_set_timeout($this->smtp_conn, 0, 100000);
 
     if($this->do_debug >= 2) {
@@ -221,13 +223,14 @@ class SMTP {
   }
 
   /**
-   * Initiate a TSL communication with the server.
+   * Initiate a TLS communication with the server.
+   * Upgrades the existing connection to use TLS encryption.
    *
    * SMTP CODE 220 Ready to start TLS
    * SMTP CODE 501 Syntax error (no parameters allowed)
    * SMTP CODE 454 TLS not available due to temporary reason
    * @access public
-   * @return bool success
+   * @return bool True on success, false on failure
    */
   public function StartTLS() {
     $this->error = null; # to avoid confusion
@@ -266,12 +269,13 @@ class SMTP {
   }
 
   /**
-   * Performs SMTP authentication.  Must be run after running the
-   * Hello() method.  Returns true if successfully authenticated.
+   * Performs SMTP authentication using AUTH LOGIN method.
+   * Must be run after running the Hello() method.
+   * Returns true if successfully authenticated.
    * @access public
    * @param string $username The authentication username
    * @param string $password The authentication password
-   * @return bool
+   * @return bool True if authenticated successfully, false on failure
    */
   public function Authenticate($username, $password) {
     // Start authentication
@@ -393,7 +397,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500,501,503,421
    * @access public
    * @param string $msg_data The complete message including headers and body
-   * @return bool
+   * @return bool True on success, false on failure
    */
   public function Data($msg_data) {
     $this->error = null; // so no confusion is caused
@@ -591,7 +595,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500, 501, 504, 421
    * @access public
    * @param string $host The hostname to identify ourselves with (default: "localhost")
-   * @return bool
+   * @return bool True on success, false on failure
    */
   public function Hello($host="") {
     $this->error = null; // so no confusion is caused
@@ -666,7 +670,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500,501,502,504,421
    * @access public
    * @param string $keyword Optional keyword to get help for (default: "")
-   * @return string
+   * @return string|false Help text on success, false on failure
    */
   public function Help($keyword="") {
     $this->error = null; // to avoid confusion
@@ -719,7 +723,7 @@ class SMTP {
    * SMTP CODE SUCCESS: 500,501,421
    * @access public
    * @param string $from The sender email address
-   * @return bool
+   * @return bool True on success, false on failure
    */
   public function Mail($from) {
     $this->error = null; // so no confusion is caused
@@ -861,7 +865,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500,501,503,421
    * @access public
    * @param string $to The recipient email address
-   * @return bool
+   * @return bool True if recipient accepted, false if rejected
    */
   public function Recipient($to) {
     $this->error = null; // so no confusion is caused
