@@ -542,7 +542,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500,501,502,504,421
    * @access public
    * @param string $name The mailing list name to expand
-   * @return string array
+   * @return array|false Array of members on success, false on failure
    */
   public function Expand($name) {
     $this->error = null; // so no confusion is caused
@@ -627,7 +627,9 @@ class SMTP {
   /**
    * Sends a HELO/EHLO command.
    * @access private
-   * @return bool
+   * @param string $hello The command to send (HELO or EHLO)
+   * @param string $host The hostname to identify with
+   * @return bool True on success, false on failure
    */
   private function SendHello($hello, $host) {
     fputs($this->smtp_conn, $hello . " " . $host . $this->CRLF);
@@ -1125,7 +1127,7 @@ class SMTP {
    * SMTP CODE ERROR  : 500,501,502,421
    * @access public
    * @param string $name The name or email address to verify
-   * @return int
+   * @return string|false Server reply on success, false on failure
    */
   public function Verify($name) {
     $this->error = null; // so no confusion is caused
