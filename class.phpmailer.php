@@ -317,6 +317,18 @@ class PHPMailer {
     $this->Mailer   = 'sendmail';
   }
 
+  /**
+   * Checks if S/MIME signing support is available.
+   * S/MIME signing requires the OpenSSL PHP extension.
+   * Use this method to detect whether S/MIME functionality is available
+   * before calling Sign() to avoid runtime errors.
+   * @return bool True if OpenSSL extension is loaded, false otherwise
+   * @see Sign()
+   */
+  public function hasSmimeSupport() {
+    return extension_loaded('openssl');
+  }
+
   /////////////////////////////////////////////////
   // METHODS, RECIPIENTS
   /////////////////////////////////////////////////
@@ -1027,26 +1039,32 @@ class PHPMailer {
     if($this->IsError()) {
       $result = '';
     } else if ($this->sign_key_file) {
-      $file = tempnam("", "mail");
-      $fp = fopen($file, "w");
-      fwrite($fp, $result);
-      fclose($fp);
-      $signed = tempnam("", "signed");
+      // Check if OpenSSL extension is available for S/MIME signing
+      if (!$this->hasSmimeSupport()) {
+        $this->SetError($this->Lang("signing") . " - OpenSSL extension not available");
+        $result = '';
+      } else {
+        $file = tempnam("", "mail");
+        $fp = fopen($file, "w");
+        fwrite($fp, $result);
+        fclose($fp);
+        $signed = tempnam("", "signed");
 
-      if (@openssl_pkcs7_sign($file, $signed, "file://".$this->sign_cert_file, array("file://".$this->sign_key_file, $this->sign_key_pass), null)) {
+        if (@openssl_pkcs7_sign($file, $signed, "file://".$this->sign_cert_file, array("file://".$this->sign_key_file, $this->sign_key_pass), null)) {
         $fp = fopen($signed, "r");
         $result = '';
         while(!feof($fp)){
           $result = $result . fread($fp, 1024);
         }
         fclose($fp);
-      } else {
-        $this->SetError($this->Lang("signing").openssl_error_string());
-        $result = '';
-      }
+        } else {
+          $this->SetError($this->Lang("signing").openssl_error_string());
+          $result = '';
+        }
 
-      unlink($file);
-      unlink($signed);
+        unlink($file);
+        unlink($signed);
+      }
     }
 
     return $result;
@@ -1886,9 +1904,15 @@ class PHPMailer {
   /**
    * Set the private key file and password to sign the message.
    *
+   * Requires OpenSSL PHP extension. Check with hasSmimeSupport() before use.
+   * If OpenSSL extension is not available, signing will fail gracefully in
+   * CreateBody() with an error message set in ErrorInfo.
+   *
    * @access public
-   * @param string $key_filename Parameter File Name
+   * @param string $cert_filename Path to certificate file
+   * @param string $key_filename Path to private key file
    * @param string $key_pass Password for private key
+   * @see hasSmimeSupport()
    */
   public function Sign($cert_filename, $key_filename, $key_pass) {
     $this->sign_cert_file = $cert_filename;
